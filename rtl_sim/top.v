@@ -1,63 +1,72 @@
-module top (
-    input wire clk,
-    input wire rest
-);
+module top(input clk, rest);
 
     wire [31:0] imm_address;
     wire [31:0] imm_address_jump;
-    wire branch_taken;
-    wire jal;
-    wire jalr;
-    wire [31:0] pc;
-    wire [31:0] current_pc;
+    wire beq, bneq, blt, bgt, bltu, bgeu, JAL, JALR;
+    wire [31:0] pc, current_pc;
     wire [31:0] instruction;
-    wire [5:0] alu_op;
-    wire [31:0] operand_a;
-    wire [31:0] operand_b;
-    wire [31:0] alu_result;
+    wire [5:0] control_out;
+    wire [4:0] rs1, rs2, rs3;
+    wire [31:0] result;
+    wire [31:0] inst_jump;
 
-    instruction_fetch_unit ifu (
-        .clk(clk),
-        .rest(rest),
-        .imm_address(imm_address),
-        .imm_address_jump(imm_address_jump),
-        .branch_taken(branch_taken),
-        .jal(jal),
-        .jalr(jalr),
-        .pc(pc),
-        .current_pc(current_pc)
+    assign imm_address = {{19{instruction[31]}}, instruction[31],
+                          instruction[7], instruction[30:25],
+                          instruction[11:8], 1'b0};
+
+    instruction_fetch_unit IFU_UTT(
+        clk,
+        rest,
+        imm_address,
+        inst_jump,
+        beq,
+        bneq,
+        blt,
+        bgt,
+        bltu,
+        bgeu,
+        JAL,
+        JALR,
+        pc,
+        current_pc
     );
 
-    instruction_memory im (
-        .clk(clk),
-        .rest(rest),
-        .pc(pc),
-        .instruction(instruction)
+    instruction_memory IM_UTT(
+        clk,
+        rest,
+        pc,
+        instruction
     );
 
-    control_unit cu (
-        .opcode(instruction[6:0]),
-        .funct3(instruction[14:12]),
-        .funct7(instruction[31:25]),
-        .instruction(instruction),
-        .alu_op(alu_op),
-        .branch_taken(branch_taken),
-        .jal(jal),
-        .jalr(jalr),
-        .imm_address(imm_address),
-        .inst_jump(imm_address_jump)
+    control_unit CU_UTT(
+        clk,
+        instruction[31:25],
+        instruction[14:12],
+        instruction[6:0],
+        control_out,
+        result[0],
+        beq,
+        bneq,
+        blt,
+        bgt,
+        bltu,
+        bgeu,
+        JAL,
+        JALR,
+        instruction,
+        inst_jump
     );
 
-    assign operand_a = pc;
-    assign operand_b = 32'd4;
-
-    alu u_alu (
-        .clk(clk),
-        .reset(rest),
-        .alu_op(alu_op),
-        .operand_a(operand_a),
-        .operand_b(operand_b),
-        .result(alu_result)
+    ALU alu_utt(
+        clk,
+        rest,
+        control_out,
+        instruction[31:20],
+        instruction[19:15],
+        instruction[24:20],
+        instruction[11:7],
+        result,
+        pc
     );
 
 endmodule
